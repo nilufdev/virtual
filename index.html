@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OOTDiffusion - Virtual Try-On (Upper Body)</title>
+    <style>
+        /* General Styling */
+        body {
+            font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: #f9fafb;
+            color: #374151;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 1100px;
+            width: 100%;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #6b7280;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+        }
+
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Input Sections */
+        .panel {
+            background: #ffffff;
+            margin-bottom: 20px;
+        }
+
+        .label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+            color: #111827;
+        }
+
+        .upload-box {
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            height: 280px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+            background: #f9fafb;
+            position: relative;
+            transition: border-color 0.2s;
+        }
+
+        .upload-box:hover {
+            border-color: #9ca3af;
+        }
+
+        .upload-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+
+        .upload-text {
+            color: #6b7280;
+            pointer-events: none;
+            font-size: 0.9rem;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        /* Controls */
+        .controls {
+            margin-top: 10px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .fixed-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            background: #f3f4f6;
+            color: #6b7280;
+            font-weight: 500;
+            box-sizing: border-box;
+            cursor: not-allowed;
+        }
+
+        button.run-btn {
+            width: 100%;
+            background: black;
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        button.run-btn:hover {
+            opacity: 0.8;
+        }
+
+        button.run-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        /* Result Area */
+        .result-panel {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .result-box {
+            flex-grow: 1;
+            min-height: 600px;
+            background: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            position: relative;
+        }
+
+        .result-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: none;
+            border-radius: 4px;
+        }
+
+        /* Loading Animation */
+        .loader {
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #000;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin-bottom: 10px;
+        }
+
+        .loading-container {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            display: none;
+        }
+
+        .timer {
+            color: #6b7280;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>OOTDiffusion</h1>
+        <div class="subtitle">Virtual Try-On (Upper Body Demo)</div>
+
+        <div class="grid">
+            <div>
+                <div class="panel">
+                    <span class="label">Model Image</span>
+                    <div class="upload-box" onclick="triggerUpload('modelInput')">
+                        <span class="upload-text" id="modelText">Drop Image Here<br><small>(Click to
+                                upload)</small></span>
+                        <img id="modelPreview" src="" alt="Model">
+                    </div>
+                    <input type="file" id="modelInput" accept="image/*"
+                        onchange="previewImage(this, 'modelPreview', 'modelText')">
+                </div>
+
+                <div class="panel">
+                    <span class="label">Garment Image</span>
+                    <div class="upload-box" onclick="triggerUpload('clothInput')">
+                        <span class="upload-text" id="clothText">Drop Image Here<br><small>(Click to
+                                upload)</small></span>
+                        <img id="clothPreview" src="" alt="Cloth">
+                    </div>
+                    <input type="file" id="clothInput" accept="image/*"
+                        onchange="previewImage(this, 'clothPreview', 'clothText')">
+                </div>
+
+                <div class="controls">
+                    <span class="label">Category</span>
+                    <div class="fixed-input">Upper Body</div>
+                    <button class="run-btn" id="runBtn" onclick="runFakeProcess()">Run</button>
+                </div>
+            </div>
+
+            <div class="result-panel">
+                <span class="label">Generated Result</span>
+                <div class="result-box">
+                    <div class="loading-container" id="loadingState">
+                        <div class="loader"></div>
+                        <div class="timer" id="timer">0.0s</div>
+                    </div>
+
+                    <span id="placeholderText" style="color: #9ca3af;">Result will appear here</span>
+
+                    <img id="resultImage" src="" alt="Generated Result">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function triggerUpload(id) {
+            document.getElementById(id).click();
+        }
+
+        function previewImage(input, imgId, textId) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = document.getElementById(imgId);
+                    const text = document.getElementById(textId);
+                    img.src = e.target.result;
+                    img.style.display = 'block';
+                    text.style.display = 'none';
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function runFakeProcess() {
+            const btn = document.getElementById('runBtn');
+            const loadingState = document.getElementById('loadingState');
+            const resultImg = document.getElementById('resultImage');
+            const placeholderText = document.getElementById('placeholderText');
+            const timer = document.getElementById('timer');
+            const modelInput = document.getElementById('modelInput');
+
+            // Logic to swap image based on filename
+            let targetImage = 'res-1.png'; // Default backup
+
+            if (modelInput.files && modelInput.files[0]) {
+                const fileName = modelInput.files[0].name.toLowerCase();
+
+                if (fileName.includes('person-1')) {
+                    targetImage = 'res-1.png';
+                } else if (fileName.includes('person-2')) {
+                    targetImage = 'res-2.png';
+                }
+            }
+
+            // Reset view
+            resultImg.style.display = 'none';
+            placeholderText.style.display = 'none';
+
+            // Start Loading
+            btn.disabled = true;
+            btn.innerText = "Processing...";
+            loadingState.style.display = 'flex';
+
+            let seconds = 0;
+            const interval = setInterval(() => {
+                seconds += 0.1;
+                timer.innerText = seconds.toFixed(1) + "s";
+            }, 100);
+
+            // CHANGED: 6000 milliseconds = 6 seconds
+            setTimeout(() => {
+                clearInterval(interval);
+                loadingState.style.display = 'none';
+
+                // Set the correct image source
+                resultImg.src = targetImage;
+
+                // Show the result
+                resultImg.style.display = 'block';
+
+                // Reset button
+                btn.disabled = false;
+                btn.innerText = "Run";
+            }, 6000);
+        }
+    </script>
+
+</body>
+
+</html>
